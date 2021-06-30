@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
-import 'package:path/path.dart';
+// import 'package:path/path.dart';
 
 Future<void> main() async {
   // Ensure that plugin services are initialized so that 'availableCameras()'
@@ -118,7 +118,28 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.done) {
             // If the Future is complete, display the preview.
-            return CameraPreview(_cameraController);
+            //Used Stack to Use Focus Border in CameraPreview
+            return Stack(
+              children: <Widget>[
+                CameraPreview(_cameraController),
+                //Show Focus Border
+                Center(
+                  child: Container(
+                    margin: const EdgeInsets.all(10),
+                    height: 250,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      // color: Colors.yellow,
+                      border: Border.all(
+                        color: Colors.yellow,
+                        width: 2,
+                      ),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                  ),
+                ),
+              ],
+            );
           } else {
             return Center(
               // Otherwise, display a loading indicator.
@@ -127,6 +148,7 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
           }
         },
       ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: FloatingActionButton(
         // Provide an onPressed callback.
         onPressed: () async {
@@ -175,14 +197,18 @@ class DisplayPictureScreen extends StatelessWidget {
         // constructor with the given path to display the image.
         title: const Text("Display the Picture"),
       ),
-      body: Container(
-        margin: const EdgeInsets.all(50),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(50),
-          child: Image.file(
-            File(imagePath),
+      body: Column(
+        children: <Widget>[
+          Container(
+            margin: const EdgeInsets.all(50),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(50),
+              child: Image.file(
+                File(imagePath),
+              ),
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
