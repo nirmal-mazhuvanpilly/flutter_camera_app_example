@@ -150,6 +150,8 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: FloatingActionButton(
+        //background color
+        backgroundColor: Colors.white,
         // Provide an onPressed callback.
         onPressed: () async {
           // Take the Picture in a try / catch block. If anything goes wrong,
@@ -166,9 +168,10 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
             await Navigator.of(context).push(
               MaterialPageRoute(
                 builder: (context) => DisplayPictureScreen(
-                    // Pass the automatically generated path to
-                    // the DisplayPictureScreen widget.
-                    imagePath: image.path),
+                  // Pass the automatically generated path to
+                  // the DisplayPictureScreen widget.
+                  imagePath: image.path,
+                ),
               ),
             );
           } catch (e) {
@@ -197,18 +200,31 @@ class DisplayPictureScreen extends StatelessWidget {
         // constructor with the given path to display the image.
         title: const Text("Display the Picture"),
       ),
-      body: Column(
-        children: <Widget>[
-          Container(
-            margin: const EdgeInsets.all(50),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(50),
-              child: Image.file(
-                File(imagePath),
+      body: Padding(
+        padding: const EdgeInsets.all(25),
+        child: Column(
+          children: <Widget>[
+            Container(
+              margin: const EdgeInsets.all(30),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(50),
+                child: Image.file(
+                  File(imagePath),
+                ),
               ),
             ),
-          ),
-        ],
+            Text("Retake"),
+            //Button to Retake Camera
+            Expanded(
+              child: IconButton(
+                icon: Icon(Icons.camera_alt),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+              ),
+            )
+          ],
+        ),
       ),
     );
   }
