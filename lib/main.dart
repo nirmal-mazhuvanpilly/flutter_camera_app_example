@@ -3,9 +3,9 @@ import 'dart:io';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
-import 'package:image_cropper/image_cropper.dart';
-import 'package:path/path.dart' as path;
-import 'package:path_provider/path_provider.dart';
+import 'package:flutter_native_image/flutter_native_image.dart';
+// import 'package:path/path.dart' as path;
+// import 'package:path_provider/path_provider.dart';
 
 Future<void> main() async {
   // Ensure that plugin services are initialized so that 'availableCameras()'
@@ -167,19 +167,18 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
             final image = await _cameraController.takePicture();
             print(image.path);
 
-            // Crop Image
-            // Using image_cropper package
-            // Edit Mainfest.xml to use this package... Follow the documentation
-            final val = await ImageCropper.cropImage(
-              sourcePath: image.path,
-              aspectRatio: CropAspectRatio(ratioX: 1, ratioY: 1),
-              compressQuality: 100,
-              maxHeight: 500,
-              maxWidth: 500,
-              compressFormat: ImageCompressFormat.jpg,
-            );
+            //Crop Image
+            //Using flutter native image package
+            final cropHeight = MediaQuery.of(context).size.height * .25;
+            final cropWidth = MediaQuery.of(context).size.width * .90;
 
-            print("Cropper : ${val.path}");
+            int height = cropHeight.round();
+            int width = cropWidth.round();
+
+            final croppedImage = await FlutterNativeImage.cropImage(
+                image.path, 0, 0, height, width);
+
+            print(croppedImage.runtimeType);
 
             // If the picture was taken, display it on a new screen.
             await Navigator.of(context).push(
@@ -188,7 +187,7 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
                   // Pass the automatically generated path to
                   // the DisplayPictureScreen widget.
                   // pass the cropped file path
-                  imagePath: val.path,
+                  imagePath: croppedImage.path,
                 ),
               ),
             );
@@ -222,27 +221,28 @@ class DisplayPictureScreen extends StatelessWidget {
         height: double.infinity,
         width: double.infinity,
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: <Widget>[
             Flexible(
               flex: 1,
               child: Container(
-                // height: MediaQuery.of(context).size.height * .50,
-                margin: const EdgeInsets.all(30),
+                height: 250,
+                margin: const EdgeInsets.all(10),
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(50),
+                  borderRadius: BorderRadius.circular(20),
                   child: Image.file(
                     File(imagePath),
+                    fit: BoxFit.cover,
                   ),
                 ),
               ),
             ),
+            SizedBox(height: 25),
             Column(
               mainAxisAlignment: MainAxisAlignment.start,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: <Widget>[
-                Text("Retake"),
                 //Button to Retake Camera
                 IconButton(
                   icon: Icon(Icons.camera_alt),
@@ -250,6 +250,7 @@ class DisplayPictureScreen extends StatelessWidget {
                     Navigator.of(context).pop();
                   },
                 ),
+                Text("Retake"),
               ],
             ),
           ],
