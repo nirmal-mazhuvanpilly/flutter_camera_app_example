@@ -3,7 +3,9 @@ import 'dart:io';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
-// import 'package:path/path.dart';
+import 'package:image_cropper/image_cropper.dart';
+import 'package:path/path.dart' as path;
+import 'package:path_provider/path_provider.dart';
 
 Future<void> main() async {
   // Ensure that plugin services are initialized so that 'availableCameras()'
@@ -163,6 +165,21 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
             // Attempt to take a picture and get the file `image`
             // where it was saved.
             final image = await _cameraController.takePicture();
+            print(image.path);
+
+            // Crop Image
+            // Using image_cropper package
+            // Edit Mainfest.xml to use this package... Follow the documentation
+            final val = await ImageCropper.cropImage(
+              sourcePath: image.path,
+              aspectRatio: CropAspectRatio(ratioX: 1, ratioY: 1),
+              compressQuality: 100,
+              maxHeight: 500,
+              maxWidth: 500,
+              compressFormat: ImageCompressFormat.jpg,
+            );
+
+            print("Cropper : ${val.path}");
 
             // If the picture was taken, display it on a new screen.
             await Navigator.of(context).push(
@@ -170,7 +187,8 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
                 builder: (context) => DisplayPictureScreen(
                   // Pass the automatically generated path to
                   // the DisplayPictureScreen widget.
-                  imagePath: image.path,
+                  // pass the cropped file path
+                  imagePath: val.path,
                 ),
               ),
             );
@@ -196,33 +214,44 @@ class DisplayPictureScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        // The image is stored as a file on the device. Use the `Image.file`
+        // The image is stored as a file on the device. Use the 'Image.file'
         // constructor with the given path to display the image.
         title: const Text("Display the Picture"),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(25),
+      body: Container(
+        height: double.infinity,
+        width: double.infinity,
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: <Widget>[
-            Container(
-              margin: const EdgeInsets.all(30),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(50),
-                child: Image.file(
-                  File(imagePath),
+            Flexible(
+              flex: 1,
+              child: Container(
+                // height: MediaQuery.of(context).size.height * .50,
+                margin: const EdgeInsets.all(30),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(50),
+                  child: Image.file(
+                    File(imagePath),
+                  ),
                 ),
               ),
             ),
-            Text("Retake"),
-            //Button to Retake Camera
-            Expanded(
-              child: IconButton(
-                icon: Icon(Icons.camera_alt),
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-              ),
-            )
+            Column(
+              mainAxisAlignment: MainAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: <Widget>[
+                Text("Retake"),
+                //Button to Retake Camera
+                IconButton(
+                  icon: Icon(Icons.camera_alt),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                ),
+              ],
+            ),
           ],
         ),
       ),
