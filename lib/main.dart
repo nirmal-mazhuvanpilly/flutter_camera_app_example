@@ -70,6 +70,40 @@ class HomePage extends StatelessWidget {
   }
 }
 
+class Origin extends CustomPainter {
+  final BuildContext context;
+  Origin({
+    this.context,
+  });
+  @override
+  void paint(Canvas canvas, Size size) {
+    var paint = Paint()
+      ..color = Colors.red[400]
+      ..strokeWidth = 2
+      ..style = PaintingStyle.fill
+      ..strokeCap = StrokeCap.round;
+
+    final height = MediaQuery.of(context).size.height;
+    final width = MediaQuery.of(context).size.width;
+
+    final paintHeight = size.height;
+    final paintWidth = size.width;
+    print("Paint Height : $paintHeight & Paint Width : $paintWidth");
+    print("Height : $height & Width : $width");
+
+    Offset center = Offset(size.width / 2, size.height / 2);
+
+    print(center);
+
+    canvas.drawCircle(center, 5, paint);
+  }
+
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) {
+    return false;
+  }
+}
+
 // A screen that allows users to take a picture using a given camera.
 class TakePictureScreen extends StatefulWidget {
   final CameraDescription camera;
@@ -106,15 +140,17 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
     super.dispose();
   }
 
+  final appBar = AppBar(
+    // You must wait until the controller is initialized before displaying the
+    // camera preview. Use a FutureBuilder to display a loading spinner until the
+    // controller has finished initializing.
+    title: const Text("Take a Picture"),
+  );
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        // You must wait until the controller is initialized before displaying the
-        // camera preview. Use a FutureBuilder to display a loading spinner until the
-        // controller has finished initializing.
-        title: const Text("Take a Picture"),
-      ),
+      appBar: appBar,
       body: FutureBuilder<void>(
         future: _initializeControllerFuture,
         builder: (context, snapshot) {
@@ -139,6 +175,11 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
                       borderRadius: BorderRadius.circular(20),
                     ),
                   ),
+                ),
+                //To Display origin of center
+                CustomPaint(
+                  painter: Origin(context: context),
+                  child: Container(),
                 ),
               ],
             );
@@ -169,16 +210,26 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
 
             //Crop Image
             //Using flutter native image package
-            final cropHeight = MediaQuery.of(context).size.height * .25;
-            final cropWidth = MediaQuery.of(context).size.width * .90;
 
-            int height = cropHeight.round();
-            int width = cropWidth.round();
+            ImageProperties properties =
+                await FlutterNativeImage.getImageProperties(image.path);
+
+            final imgHeight = properties.height;
+            final imgWidth = properties.width;
+
+            double width = MediaQuery.of(context).size.width;
+            double height = MediaQuery.of(context).size.height -
+                appBar.preferredSize.height;
+
+            final xCord = (width / 2).round();
+            final yCord = (height / 2).round();
+
+            final cropWidth = (width * .90).round();
+
+            print("X : $xCord , Y : $yCord");
 
             final croppedImage = await FlutterNativeImage.cropImage(
-                image.path, 0, 0, height, width);
-
-            print(croppedImage.runtimeType);
+                image.path, xCord, yCord, cropWidth, cropWidth);
 
             // If the picture was taken, display it on a new screen.
             await Navigator.of(context).push(
@@ -227,13 +278,15 @@ class DisplayPictureScreen extends StatelessWidget {
             Flexible(
               flex: 1,
               child: Container(
+                color: Colors.white,
                 height: 250,
+                width: double.infinity,
                 margin: const EdgeInsets.all(10),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(20),
                   child: Image.file(
                     File(imagePath),
-                    fit: BoxFit.cover,
+                    fit: BoxFit.contain,
                   ),
                 ),
               ),
