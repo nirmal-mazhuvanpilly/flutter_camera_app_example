@@ -7,49 +7,31 @@ import 'package:flutter_native_image/flutter_native_image.dart';
 // import 'package:path/path.dart' as path;
 // import 'package:path_provider/path_provider.dart';
 
-Future<void> main() async {
-  // Ensure that plugin services are initialized so that 'availableCameras()'
+void main() {
+  // Ensure that plugin services are initialized so that 'availableCameras'
   // can be called before 'runApp()'
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Obtain a list of the available cameras on the device.
-  final cameras = await availableCameras();
-
-  // Get a specific camera from the list of available cameras.
-  final firstCamera = cameras.first;
-  runApp(MyApp(
-    camera: firstCamera,
-  ));
+  runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  final CameraDescription camera;
-  MyApp({
-    this.camera,
-  });
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Flutter Demo',
       theme: ThemeData.dark(),
-      home: HomePage(
-        camera: camera,
-      ),
+      home: HomePage(),
     );
   }
 }
 
 class HomePage extends StatelessWidget {
-  final CameraDescription camera;
-  HomePage({
-    this.camera,
-  });
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("HomePage"),
+        title: const Text("Camera HomePage"),
       ),
       body: Center(
         //Click to Open Camera
@@ -58,9 +40,7 @@ class HomePage extends StatelessWidget {
           onPressed: () {
             Navigator.of(context).push(
               MaterialPageRoute(
-                builder: (context) => TakePictureScreen(
-                  camera: camera,
-                ), // Pass the appropriate camera to the TakePictureScreen widget.
+                builder: (context) => TakePictureScreen(),
               ),
             );
           },
@@ -70,6 +50,7 @@ class HomePage extends StatelessWidget {
   }
 }
 
+//Custom Class to get Centre Point
 class Origin extends CustomPainter {
   final BuildContext context;
   Origin({
@@ -104,28 +85,48 @@ class Origin extends CustomPainter {
   }
 }
 
-// A screen that allows users to take a picture using a given camera.
+// A screen that allows users to take a picture.
 class TakePictureScreen extends StatefulWidget {
-  final CameraDescription camera;
-  TakePictureScreen({
-    this.camera,
-  });
   @override
   _TakePictureScreenState createState() => _TakePictureScreenState();
 }
 
 class _TakePictureScreenState extends State<TakePictureScreen> {
+  var _availableCamera;
+  var _selectedCamera;
   CameraController _cameraController;
   Future<void> _initializeControllerFuture;
-  GlobalKey keyValue = GlobalKey();
+  GlobalKey _keyValue = GlobalKey();
 
   static double dx = 0;
   static double dy = 0;
   static double dh = 0;
   static double dw = 0;
 
+  //Function to get Camera
+  _getCamera() async {
+    // Get the list of available cameras.
+    _availableCamera = await availableCameras();
+    print(availableCameras);
+
+    // Get a specific camera from the list of available cameras.
+    _selectedCamera = _availableCamera.first;
+    print(_selectedCamera);
+
+    // To display the current output from the Camera,
+    // create a CameraController.
+    _cameraController = CameraController(
+        // Get a specific camera from the list of available cameras.
+        _selectedCamera,
+        // Define the resolution to use.
+        ResolutionPreset.high);
+
+    // Next, initialize the controller. This returns a Future.
+    _initializeControllerFuture = _cameraController.initialize();
+  }
+
   _getPosition() {
-    RenderBox box = keyValue.currentContext.findRenderObject();
+    RenderBox box = _keyValue.currentContext.findRenderObject();
     Offset position = box.localToGlobal(Offset.zero);
     double x = position.dx;
     double y = position.dy;
@@ -151,16 +152,8 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
     WidgetsBinding.instance.addPostFrameCallback(_afterLayout);
     super.initState();
 
-    // To display the current output from the Camera,
-    // create a CameraController.
-    _cameraController = CameraController(
-        // Get a specific camera from the list of available cameras.
-        widget.camera,
-        // Define the resolution to use.
-        ResolutionPreset.high);
-
-    // Next, initialize the controller. This returns a Future.
-    _initializeControllerFuture = _cameraController.initialize();
+    //Function to get Camera
+    _getCamera();
   }
 
   @override
@@ -180,7 +173,7 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      key: keyValue,
+      key: _keyValue,
       appBar: appBar,
       body: FutureBuilder<void>(
         future: _initializeControllerFuture,
@@ -212,6 +205,14 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
                   painter: Origin(context: context),
                   child: Container(),
                 ),
+                Align(
+                  alignment: Alignment.bottomRight,
+                  child: IconButton(
+                      icon: Icon(Icons.camera_front),
+                      onPressed: () {
+                        print("Toogle Camera");
+                      }),
+                ),
               ],
             );
           } else {
@@ -242,11 +243,11 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
             //Crop Image
             //Using flutter native image package
 
-            ImageProperties properties =
-                await FlutterNativeImage.getImageProperties(image.path);
+            // ImageProperties properties =
+            //     await FlutterNativeImage.getImageProperties(image.path);
 
-            final imgHeight = properties.height;
-            final imgWidth = properties.width;
+            // final imgHeight = properties.height;
+            // final imgWidth = properties.width;
 
             double width = MediaQuery.of(context).size.width;
             double height = MediaQuery.of(context).size.height -
@@ -255,7 +256,7 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
             final xCord = (width / 2).round();
             final yCord = (height / 2).round();
 
-            final cropWidth = (width * .90).round();
+            // final cropWidth = (width * .90).round();
 
             print("X : $xCord , Y : $yCord");
 
@@ -328,6 +329,7 @@ class DisplayPictureScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: <Widget>[
                 //Button to Retake Camera
+                //Close current context
                 IconButton(
                   icon: Icon(Icons.camera_alt),
                   onPressed: () {
