@@ -4,7 +4,7 @@ import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-// import 'package:flutter_native_image/flutter_native_image.dart';
+import 'package:flutter_native_image/flutter_native_image.dart';
 import 'package:image/image.dart' as img;
 import 'package:exif/exif.dart';
 
@@ -65,16 +65,7 @@ class Origin extends CustomPainter {
       ..style = PaintingStyle.fill
       ..strokeCap = StrokeCap.round;
 
-    // final height = MediaQuery.of(context).size.height;
-    // final width = MediaQuery.of(context).size.width;
-
-    // final paintHeight = size.height;
-    // final paintWidth = size.width;
-    // print("Paint Height : $paintHeight & Paint Width : $paintWidth");
-    // print("Screen Height : $height & Screen Width : $width");
-
     Offset center = Offset(size.width / 2, size.height / 2);
-
     // print(center);
 
     canvas.drawCircle(center, 5, paint);
@@ -98,11 +89,17 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
   CameraController _cameraController;
   Future<void> _initializeControllerFuture;
   GlobalKey _focusKeyValue = GlobalKey();
+  GlobalKey _pointerKeyValue = GlobalKey();
 
   static double dx = 0;
   static double dy = 0;
   static double dh = 0;
   static double dw = 0;
+
+  static double dxPointer = 0;
+  static double dyPointer = 0;
+  static double dhPointer = 0;
+  static double dwPointer = 0;
 
   //Function to get Camera
   _getCamera() async {
@@ -126,6 +123,7 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
     _initializeControllerFuture = _cameraController.initialize();
   }
 
+  // Function to get Position of Focus Border
   _getPositionofFocusBorder() {
     RenderBox box = _focusKeyValue.currentContext.findRenderObject();
     Offset position = box.localToGlobal(Offset.zero);
@@ -141,9 +139,27 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
     });
   }
 
+  // Function to get Position of Pointer
+  _getPositionofPointer() {
+    RenderBox box = _pointerKeyValue.currentContext.findRenderObject();
+    Offset position = box.localToGlobal(Offset.zero);
+    double x = position.dx;
+    double y = position.dy;
+
+    setState(() {
+      dxPointer = x;
+      dyPointer = y;
+      dhPointer = box.size.height;
+      dwPointer = box.size.width;
+      print(
+          "Pointer Details == dx : $dxPointer , dy : $dyPointer , dh : $dhPointer , dw : $dwPointer");
+    });
+  }
+
+  //This function will call in addPostFrameCallback
   _afterLayout(_) {
     _getPositionofFocusBorder();
-    // _getPositionPointer();
+    _getPositionofPointer();
   }
 
   // Function to toggle Camera
@@ -172,6 +188,8 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
     if (height >= width) {
       // I'm interested in portrait photos so
       // I'll just return here
+      print("Original image Height : ${originalImage.height}");
+      print("Original image Width : ${originalImage.width}");
       return originalFile;
     }
 
@@ -186,10 +204,19 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
       // rotate
       if (exifData['Image Orientation'].printable.contains('Horizontal')) {
         fixedImage = img.copyRotate(originalImage, 90);
+        print("Block 1");
+        print("Fixed image Height : ${fixedImage.height}");
+        print("Fixed image Width : ${fixedImage.width}");
       } else if (exifData['Image Orientation'].printable.contains('180')) {
         fixedImage = img.copyRotate(originalImage, -90);
+        print("Block 2");
+        print("Fixed image Height : ${fixedImage.height}");
+        print("Fixed image Width : ${fixedImage.width}");
       } else {
-        fixedImage = img.copyRotate(originalImage, 0);
+        fixedImage = img.copyRotate(originalImage, 90);
+        print("Block 3");
+        print("Fixed image Height : ${fixedImage.height}");
+        print("Fixed image Width : ${fixedImage.width}");
       }
     }
 
@@ -246,9 +273,8 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
         Center(
           child: Container(
             key: _focusKeyValue,
-            margin: const EdgeInsets.symmetric(horizontal: 5),
-            height: 250,
-            width: double.infinity,
+            height: MediaQuery.of(context).size.height * .30,
+            width: MediaQuery.of(context).size.width * .95,
             decoration: BoxDecoration(
               // color: Colors.yellow,
               border: Border.all(
@@ -259,9 +285,10 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
             ),
           ),
         ),
-        //To Display origin of center
+
+        //To Display origin of center in Red Color
         CustomPaint(
-          // key: _pointerKeyValue,
+          key: _pointerKeyValue,
           painter: Origin(context: context),
           child: Container(),
         ),
@@ -315,6 +342,43 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
             // Using exif & image package
             final rotateFile = await fixExifRotation(image.path);
 
+            //Crop Image
+            //Using flutter native image package
+
+            // To get AppBar Height
+            final appBarHeight = appBar.preferredSize.height;
+
+            // To get StatusBar height
+            final statusBarHeight = MediaQuery.of(context).padding.top;
+            print("Status Bar : $statusBarHeight");
+
+            final screenWidth = MediaQuery.of(context).size.height;
+            print(screenWidth);
+
+            ImageProperties properties =
+                await FlutterNativeImage.getImageProperties(image.path);
+
+            int imageWidth = properties.width;
+            int imageHeight = properties.height;
+
+            print("imageWidth:$imageWidth");
+            print("imageHeight:$imageHeight");
+
+            final dxCrop = dx.round();
+            final dyCrop = (dy + appBarHeight + statusBarHeight).round();
+            final dhCrop = (dhPointer - appBarHeight - statusBarHeight).round();
+            final dwCrop = dwPointer.round();
+            print(
+                "dxCrop:$dxCrop , dyCrop:$dyCrop , dhCrop:$dhCrop , dwCrop:$dwCrop");
+
+            final croppedImage = await FlutterNativeImage.cropImage(
+              rotateFile.path,
+              dxCrop,
+              dyCrop,
+              imageWidth - 10,
+              dhCrop,
+            );
+
             // If the picture was taken, display it on a new screen.
             await Navigator.of(context).push(
               MaterialPageRoute(
@@ -322,7 +386,7 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
                   // Pass the automatically generated path to
                   // the DisplayPictureScreen widget.
                   // pass the cropped file path
-                  imagePath: rotateFile.path,
+                  imagePath: croppedImage.path,
                 ),
               ),
             );
