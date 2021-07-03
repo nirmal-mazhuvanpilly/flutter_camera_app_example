@@ -4,9 +4,9 @@ import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_native_image/flutter_native_image.dart';
-// import 'package:path/path.dart' as path;
-// import 'package:path_provider/path_provider.dart';
+// import 'package:flutter_native_image/flutter_native_image.dart';
+import 'package:image/image.dart' as img;
+import 'package:exif/exif.dart';
 
 void main() {
   // Ensure that plugin services are initialized so that 'availableCameras'
@@ -65,17 +65,17 @@ class Origin extends CustomPainter {
       ..style = PaintingStyle.fill
       ..strokeCap = StrokeCap.round;
 
-    final height = MediaQuery.of(context).size.height;
-    final width = MediaQuery.of(context).size.width;
+    // final height = MediaQuery.of(context).size.height;
+    // final width = MediaQuery.of(context).size.width;
 
-    final paintHeight = size.height;
-    final paintWidth = size.width;
-    print("Paint Height : $paintHeight & Paint Width : $paintWidth");
-    print("Height : $height & Width : $width");
+    // final paintHeight = size.height;
+    // final paintWidth = size.width;
+    // print("Paint Height : $paintHeight & Paint Width : $paintWidth");
+    // print("Screen Height : $height & Screen Width : $width");
 
     Offset center = Offset(size.width / 2, size.height / 2);
 
-    print(center);
+    // print(center);
 
     canvas.drawCircle(center, 5, paint);
   }
@@ -97,7 +97,7 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
   var _selectedCamera;
   CameraController _cameraController;
   Future<void> _initializeControllerFuture;
-  GlobalKey _keyValue = GlobalKey();
+  GlobalKey _focusKeyValue = GlobalKey();
 
   static double dx = 0;
   static double dy = 0;
@@ -126,8 +126,8 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
     _initializeControllerFuture = _cameraController.initialize();
   }
 
-  _getPosition() {
-    RenderBox box = _keyValue.currentContext.findRenderObject();
+  _getPositionofFocusBorder() {
+    RenderBox box = _focusKeyValue.currentContext.findRenderObject();
     Offset position = box.localToGlobal(Offset.zero);
     double x = position.dx;
     double y = position.dy;
@@ -137,12 +137,13 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
       dy = y;
       dh = box.size.height;
       dw = box.size.width;
-      print("dx : $dx , dy : $dy , dh : $dh , dw : $dw");
+      print("FocusBorder Details == dx : $dx , dy : $dy , dh : $dh , dw : $dw");
     });
   }
 
   _afterLayout(_) {
-    _getPosition();
+    _getPositionofFocusBorder();
+    // _getPositionPointer();
   }
 
   // Function to toggle Camera
@@ -155,6 +156,50 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
           CameraController(_selectedCamera, ResolutionPreset.high);
       _initializeControllerFuture = _cameraController.initialize();
     });
+  }
+
+  //Function to Rotate File
+  Future<File> fixExifRotation(String imagePath) async {
+    final originalFile = File(imagePath);
+    List<int> imageBytes = await originalFile.readAsBytes();
+
+    final originalImage = img.decodeImage(imageBytes);
+
+    final height = originalImage.height;
+    final width = originalImage.width;
+
+    // Let's check for the image size
+    if (height >= width) {
+      // I'm interested in portrait photos so
+      // I'll just return here
+      return originalFile;
+    }
+
+    // We'll use the exif package to read exif data
+    // This is map of several exif properties
+    // Let's check 'Image Orientation'
+    final exifData = await readExifFromBytes(imageBytes);
+
+    img.Image fixedImage;
+
+    if (height < width) {
+      // rotate
+      if (exifData['Image Orientation'].printable.contains('Horizontal')) {
+        fixedImage = img.copyRotate(originalImage, 90);
+      } else if (exifData['Image Orientation'].printable.contains('180')) {
+        fixedImage = img.copyRotate(originalImage, -90);
+      } else {
+        fixedImage = img.copyRotate(originalImage, 0);
+      }
+    }
+
+    // Here you can select whether you'd like to save it as png
+    // or jpg with some compression
+    // I choose jpg with 100% quality
+    final fixedFile =
+        await originalFile.writeAsBytes(img.encodeJpg(fixedImage));
+
+    return fixedFile;
   }
 
   @override
@@ -200,8 +245,8 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
       children: <Widget>[
         Center(
           child: Container(
-            key: _keyValue,
-            margin: const EdgeInsets.all(10),
+            key: _focusKeyValue,
+            margin: const EdgeInsets.symmetric(horizontal: 5),
             height: 250,
             width: double.infinity,
             decoration: BoxDecoration(
@@ -216,6 +261,7 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
         ),
         //To Display origin of center
         CustomPaint(
+          // key: _pointerKeyValue,
           painter: Origin(context: context),
           child: Container(),
         ),
@@ -265,28 +311,9 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
             final image = await _cameraController.takePicture();
             print(image.path);
 
-            //Crop Image
-            //Using flutter native image package
-
-            // ImageProperties properties =
-            //     await FlutterNativeImage.getImageProperties(image.path);
-
-            // final imgHeight = properties.height;
-            // final imgWidth = properties.width;
-
-            double width = MediaQuery.of(context).size.width;
-            double height = MediaQuery.of(context).size.height -
-                appBar.preferredSize.height;
-
-            final xCord = (width / 2).round();
-            final yCord = (height / 2).round();
-
-            // final cropWidth = (width * .90).round();
-
-            print("X : $xCord , Y : $yCord");
-
-            final croppedImage =
-                await FlutterNativeImage.cropImage(image.path, 0, 0, 600, 300);
+            // Rotate Image
+            // Using exif & image package
+            final rotateFile = await fixExifRotation(image.path);
 
             // If the picture was taken, display it on a new screen.
             await Navigator.of(context).push(
@@ -295,7 +322,7 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
                   // Pass the automatically generated path to
                   // the DisplayPictureScreen widget.
                   // pass the cropped file path
-                  imagePath: croppedImage.path,
+                  imagePath: rotateFile.path,
                 ),
               ),
             );
