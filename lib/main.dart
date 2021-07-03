@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:camera/camera.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_native_image/flutter_native_image.dart';
 // import 'package:path/path.dart' as path;
@@ -182,57 +183,70 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
     title: const Text("Take a Picture"),
   );
 
+  // Toogle Camera Button Widget
+  Widget toogleCameraBtn(BuildContext context) {
+    return Align(
+      alignment: Alignment.bottomRight,
+      child: IconButton(
+        icon: Icon(Icons.camera_front),
+        onPressed: _toggleCamera,
+      ),
+    );
+  }
+
+  // Focus Border Widget
+  Widget focusBorder(BuildContext context) {
+    return Stack(
+      children: <Widget>[
+        Center(
+          child: Container(
+            key: _keyValue,
+            margin: const EdgeInsets.all(10),
+            height: 250,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              // color: Colors.yellow,
+              border: Border.all(
+                color: Colors.yellow,
+                width: 2,
+              ),
+              borderRadius: BorderRadius.circular(20),
+            ),
+          ),
+        ),
+        //To Display origin of center
+        CustomPaint(
+          painter: Origin(context: context),
+          child: Container(),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      key: _keyValue,
       appBar: appBar,
-      body: FutureBuilder<void>(
-        future: _initializeControllerFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.done) {
-            // If the Future is complete, display the preview.
-            //Used Stack to Use Focus Border in CameraPreview
-            return Stack(
-              children: <Widget>[
-                CameraPreview(_cameraController),
-                //Show Focus Border
-                Center(
-                  child: Container(
-                    margin: const EdgeInsets.all(10),
-                    height: 250,
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      // color: Colors.yellow,
-                      border: Border.all(
-                        color: Colors.yellow,
-                        width: 2,
-                      ),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                  ),
-                ),
-                //To Display origin of center
-                CustomPaint(
-                  painter: Origin(context: context),
-                  child: Container(),
-                ),
-                Align(
-                  alignment: Alignment.bottomRight,
-                  child: IconButton(
-                    icon: Icon(Icons.camera_front),
-                    onPressed: _toggleCamera,
-                  ),
-                ),
-              ],
-            );
-          } else {
-            return Center(
-              // Otherwise, display a loading indicator.
-              child: CircularProgressIndicator(),
-            );
-          }
-        },
+      body: Stack(
+        children: <Widget>[
+          FutureBuilder<void>(
+            future: _initializeControllerFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.done) {
+                // If the Future is complete, display the preview.
+                //Used Stack to Use Focus Border in CameraPreview
+                return CameraPreview(_cameraController);
+              } else {
+                return Center(
+                  // Otherwise, display a loading indicator.
+                  child: CupertinoActivityIndicator(),
+                );
+              }
+            },
+          ),
+          focusBorder(context),
+          toogleCameraBtn(context),
+        ],
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       floatingActionButton: FloatingActionButton(
