@@ -117,10 +117,40 @@ class TakePictureScreen extends StatefulWidget {
 class _TakePictureScreenState extends State<TakePictureScreen> {
   CameraController _cameraController;
   Future<void> _initializeControllerFuture;
+  GlobalKey keyValue = GlobalKey();
+
+  static double dx = 0;
+  static double dy = 0;
+  static double dh = 0;
+  static double dw = 0;
+
+  _getPosition() {
+    RenderBox box = keyValue.currentContext.findRenderObject();
+    Offset position = box.localToGlobal(Offset.zero);
+    double x = position.dx;
+    double y = position.dy;
+
+    setState(() {
+      dx = x;
+      dy = y;
+      dh = box.size.height;
+      dw = box.size.width;
+      print("dx : $dx , dy : $dy , dh : $dh , dw : $dw");
+    });
+  }
+
+  _afterLayout(_) {
+    _getPosition();
+  }
 
   @override
   void initState() {
+    // Flutter Framework has a convenient API to request a callback method to be executed once a frame rendering is complete.
+    // This method is:
+    // WidgetsBinding.instance.addPostFrameCallback.
+    WidgetsBinding.instance.addPostFrameCallback(_afterLayout);
     super.initState();
+
     // To display the current output from the Camera,
     // create a CameraController.
     _cameraController = CameraController(
@@ -150,6 +180,7 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: keyValue,
       appBar: appBar,
       body: FutureBuilder<void>(
         future: _initializeControllerFuture,
@@ -228,8 +259,8 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
 
             print("X : $xCord , Y : $yCord");
 
-            final croppedImage = await FlutterNativeImage.cropImage(
-                image.path, xCord, yCord, cropWidth, cropWidth);
+            final croppedImage =
+                await FlutterNativeImage.cropImage(image.path, 0, 0, 600, 300);
 
             // If the picture was taken, display it on a new screen.
             await Navigator.of(context).push(
