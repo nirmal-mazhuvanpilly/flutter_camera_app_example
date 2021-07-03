@@ -144,6 +144,18 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
     _getPosition();
   }
 
+  // Function to toggle Camera
+  _toggleCamera() {
+    setState(() {
+      _selectedCamera = _selectedCamera == _availableCamera.first
+          ? _availableCamera.elementAt(1)
+          : _availableCamera.elementAt(0);
+      _cameraController =
+          CameraController(_selectedCamera, ResolutionPreset.high);
+      _initializeControllerFuture = _cameraController.initialize();
+    });
+  }
+
   @override
   void initState() {
     // Flutter Framework has a convenient API to request a callback method to be executed once a frame rendering is complete.
@@ -208,10 +220,9 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
                 Align(
                   alignment: Alignment.bottomRight,
                   child: IconButton(
-                      icon: Icon(Icons.camera_front),
-                      onPressed: () {
-                        print("Toogle Camera");
-                      }),
+                    icon: Icon(Icons.camera_front),
+                    onPressed: _toggleCamera,
+                  ),
                 ),
               ],
             );
