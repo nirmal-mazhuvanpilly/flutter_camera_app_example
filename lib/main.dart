@@ -219,45 +219,49 @@ class _TakePictureState extends State<TakePicture> {
   }
 
   Future<File> cropImage(BuildContext context, String imagePath) async {
+    // To get Screen size
     final screenSize = MediaQuery.of(context).size;
+    // To get Status bar size
     final statusBarSize = MediaQuery.of(context).padding.top;
 
+    // To get Screen width & height
     final screenWidth = screenSize.width;
     final screenHeight = screenSize.height;
+
     print("Screen Height : $screenHeight");
     print("Screen Width : $screenWidth");
     print("Status Bar Height : $statusBarSize");
 
+    // To get Image properties
     ImageProperties properties =
         await FlutterNativeImage.getImageProperties(imagePath);
 
+    // To get Image height and width
     int imageWidth = properties.width;
     int imageHeight = properties.height;
 
     print("imageWidth:$imageWidth");
     print("imageHeight:$imageHeight");
 
-    final dxCrop = dx.round();
-    final dyCrop = dy.round();
-    final dwCrop = dw.round();
-    final dhCrop = dh.round();
+    int xOffset = ((dx * imageWidth) / screenWidth).round();
+    int yOffset = ((dy * imageHeight) / screenHeight).round();
+    int widthOffset = ((dw * imageWidth) / screenWidth).round();
+    int heightOffset = ((dh * imageHeight) / screenHeight).round();
+
+    xOffset = (xOffset + (xOffset / 2)).round();
+    yOffset = (yOffset - xOffset).round();
+    widthOffset = widthOffset - (2 * xOffset);
+    heightOffset = (heightOffset + (xOffset / 2)).round();
 
     print(
-        "dxCrop:$dxCrop , dyCrop:$dyCrop , dwCrop:$dwCrop , dhCrop:$dhCrop  ");
-
-    final cropX = dxCrop.round();
-    final cropY = (screenHeight - dyCrop - statusBarSize).round();
-    final cropW = (imageWidth * .95).round();
-    final cropH = (dwCrop - statusBarSize).round();
-
-    print("Exact conversion : x:$cropX , y:$cropY , w:$cropW , h:$cropH");
+        "xOffset:$xOffset , yOffset:$yOffset , widthOffset:$widthOffset , heightOffset:$heightOffset  ");
 
     final croppedImage = await FlutterNativeImage.cropImage(
       imagePath,
-      cropX,
-      cropY,
-      cropW,
-      cropH,
+      xOffset,
+      yOffset,
+      widthOffset,
+      heightOffset,
     );
 
     return croppedImage;
