@@ -233,7 +233,13 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
   // Function to Crop Image
   // Using flutter native image package
   Future<File> cropImage(BuildContext context, String imagePath) async {
-    // final screenSize = MediaQuery.of(context).size;
+    final screenSize = MediaQuery.of(context).size;
+
+    // final screenWidth = screenSize.width;
+    final screenHeight = screenSize.height;
+
+    int heightOffset = screenHeight.round();
+    // int widthOffset = screenWidth.round();
 
     ImageProperties properties =
         await FlutterNativeImage.getImageProperties(imagePath);
@@ -245,18 +251,21 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
     print("imageHeight:$imageHeight");
 
     final dxCrop = dx.round();
-    final dyCrop = (dy).round();
-    final dhCrop = (dhPointer).round();
-    final dwCrop = dwPointer.round();
+    final dyCrop = dy.round();
+    final dhCrop = dh.round();
+    final dwCrop = dw.round();
     print("dxCrop:$dxCrop , dyCrop:$dyCrop , dhCrop:$dhCrop , dwCrop:$dwCrop");
 
     final croppedImage = await FlutterNativeImage.cropImage(
       imagePath,
       dxCrop,
-      dyCrop,
-      imageWidth - 10,
-      dhCrop,
+      dyCrop + 150,
+      (imageWidth * .95).toInt(),
+      dwCrop,
     );
+
+    print(
+        "Exact conversion : x:$dxCrop , y:${dyCrop + 150} , w:${(imageWidth * .95).toInt()} , h:$dwCrop");
 
     return croppedImage;
   }
@@ -419,7 +428,7 @@ class DisplayPictureScreen extends StatelessWidget {
             Flexible(
               flex: 1,
               child: Container(
-                color: Colors.white,
+                // color: Colors.white,
                 height: 250,
                 width: double.infinity,
                 margin: const EdgeInsets.all(10),
