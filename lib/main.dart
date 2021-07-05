@@ -176,50 +176,18 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
 
   //Function to Rotate File
   // Using exif & image package
-  Future<File> fixExifRotation(String imagePath) async {
+  Future<File> rotateToRight(String imagePath) async {
     final originalFile = File(imagePath);
     List<int> imageBytes = await originalFile.readAsBytes();
-
     final originalImage = img.decodeImage(imageBytes);
-
-    final height = originalImage.height;
-    final width = originalImage.width;
-
-    // Let's check for the image size
-    if (height >= width) {
-      // I'm interested in portrait photos so
-      // I'll just return here
-      print("Original image Height : ${originalImage.height}");
-      print("Original image Width : ${originalImage.width}");
-      return originalFile;
-    }
-
-    // We'll use the exif package to read exif data
-    // This is map of several exif properties
-    // Let's check 'Image Orientation'
-    final exifData = await readExifFromBytes(imageBytes);
 
     img.Image fixedImage;
 
-    if (height < width) {
-      // rotate
-      if (exifData['Image Orientation'].printable.contains('Horizontal')) {
-        fixedImage = img.copyRotate(originalImage, 90);
-        print("Block 1");
-        print("Fixed image Height : ${fixedImage.height}");
-        print("Fixed image Width : ${fixedImage.width}");
-      } else if (exifData['Image Orientation'].printable.contains('180')) {
-        fixedImage = img.copyRotate(originalImage, -90);
-        print("Block 2");
-        print("Fixed image Height : ${fixedImage.height}");
-        print("Fixed image Width : ${fixedImage.width}");
-      } else {
-        fixedImage = img.copyRotate(originalImage, 90);
-        print("Block 3");
-        print("Fixed image Height : ${fixedImage.height}");
-        print("Fixed image Width : ${fixedImage.width}");
-      }
-    }
+    fixedImage = img.copyRotate(originalImage, 90);
+
+    print("***Block***");
+    print("Fixed image Height : ${fixedImage.height}");
+    print("Fixed image Width : ${fixedImage.width}");
 
     // Here you can select whether you'd like to save it as png
     // or jpg with some compression
@@ -235,47 +203,15 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
   Future<File> rotateToLeft(String imagePath) async {
     final originalFile = File(imagePath);
     List<int> imageBytes = await originalFile.readAsBytes();
-
     final originalImage = img.decodeImage(imageBytes);
-
-    final height = originalImage.height;
-    final width = originalImage.width;
-
-    // Let's check for the image size
-    if (height >= width) {
-      // I'm interested in portrait photos so
-      // I'll just return here
-      print("Original image Height : ${originalImage.height}");
-      print("Original image Width : ${originalImage.width}");
-      return originalFile;
-    }
-
-    // We'll use the exif package to read exif data
-    // This is map of several exif properties
-    // Let's check 'Image Orientation'
-    final exifData = await readExifFromBytes(imageBytes);
 
     img.Image fixedImage;
 
-    if (height < width) {
-      // rotate
-      if (exifData['Image Orientation'].printable.contains('Horizontal')) {
-        fixedImage = img.copyRotate(originalImage, 90);
-        print("Block 1");
-        print("Fixed image Height : ${fixedImage.height}");
-        print("Fixed image Width : ${fixedImage.width}");
-      } else if (exifData['Image Orientation'].printable.contains('180')) {
-        fixedImage = img.copyRotate(originalImage, -90);
-        print("Block 2");
-        print("Fixed image Height : ${fixedImage.height}");
-        print("Fixed image Width : ${fixedImage.width}");
-      } else {
-        fixedImage = img.copyRotate(originalImage, -90);
-        print("Block 3");
-        print("Fixed image Height : ${fixedImage.height}");
-        print("Fixed image Width : ${fixedImage.width}");
-      }
-    }
+    fixedImage = img.copyRotate(originalImage, -90);
+
+    print("***Block***");
+    print("Fixed image Height : ${fixedImage.height}");
+    print("Fixed image Width : ${fixedImage.width}");
 
     // Here you can select whether you'd like to save it as png
     // or jpg with some compression
@@ -291,11 +227,10 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
   Future<File> cropImage(BuildContext context, String imagePath) async {
     final screenSize = MediaQuery.of(context).size;
 
-    // final screenWidth = screenSize.width;
-    // final screenHeight = screenSize.height;
-
-    // int heightOffset = screenHeight.round();
-    // int widthOffset = screenWidth.round();
+    final screenWidth = screenSize.width;
+    final screenHeight = screenSize.height;
+    print("Screen Height : $screenHeight");
+    print("Screen Width : $screenWidth");
 
     ImageProperties properties =
         await FlutterNativeImage.getImageProperties(imagePath);
@@ -312,10 +247,13 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
     final dwCrop = dw.round();
     print("dxCrop:$dxCrop , dyCrop:$dyCrop , dhCrop:$dhCrop , dwCrop:$dwCrop");
 
+    int yOffset = (screenHeight - dwCrop + 50).round();
+    print(yOffset);
+
     final croppedImage = await FlutterNativeImage.cropImage(
       imagePath,
       dxCrop,
-      dyCrop + 150,
+      yOffset,
       (imageWidth * .95).toInt(),
       dwCrop,
     );
@@ -345,10 +283,20 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
     super.dispose();
   }
 
+  // Close Camera
+  Widget closeCameraBtn(BuildContext context) {
+    return CircleAvatar(
+      child: IconButton(
+          icon: Icon(Icons.close),
+          onPressed: () {
+            Navigator.of(context).pop();
+          }),
+    );
+  }
+
   // Toggle Camera Button Widget
   Widget toggleCameraBtn(BuildContext context) {
-    return Align(
-      alignment: Alignment.bottomRight,
+    return CircleAvatar(
       child: IconButton(
         icon: Icon(Icons.switch_camera_rounded),
         onPressed: _toggleCamera,
@@ -358,8 +306,7 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
 
   // Take Image Button Widget
   Widget takeImageBtn(BuildContext context) {
-    return Align(
-      alignment: Alignment.bottomCenter,
+    return CircleAvatar(
       child: IconButton(
         icon: Icon(Icons.camera_alt),
         onPressed: () async {
@@ -374,13 +321,13 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
             final image = await _cameraController.takePicture();
             print(image.path);
 
-            // Rotate Image
-            final rotateFile = await fixExifRotation(image.path);
+            // Rotate Image Right
+            final rotateFile = await rotateToRight(image.path);
 
             //Crop Image
             final cropFile = await cropImage(context, rotateFile.path);
 
-            //Rotate Left
+            //Rotate Image Left
             final rotateLeft = await rotateToLeft(cropFile.path);
 
             // If the picture was taken and cropped, display it on a new screen.
@@ -454,8 +401,21 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
             },
           ),
           focusBorder(context),
-          toggleCameraBtn(context),
-          takeImageBtn(context),
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: Padding(
+              padding: const EdgeInsets.all(10.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: <Widget>[
+                  closeCameraBtn(context),
+                  takeImageBtn(context),
+                  toggleCameraBtn(context),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
