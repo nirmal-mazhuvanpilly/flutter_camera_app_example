@@ -239,14 +239,16 @@ class _TakePictureState extends State<TakePicture> {
 
     final dxCrop = dx.round();
     final dyCrop = dy.round();
-    final dhCrop = dh.round();
     final dwCrop = dw.round();
-    print("dxCrop:$dxCrop , dyCrop:$dyCrop , dhCrop:$dhCrop , dwCrop:$dwCrop");
+    final dhCrop = dh.round();
 
-    final cropX = dxCrop;
+    print(
+        "dxCrop:$dxCrop , dyCrop:$dyCrop , dwCrop:$dwCrop , dhCrop:$dhCrop  ");
+
+    final cropX = dxCrop.round();
     final cropY = (screenHeight - dyCrop - statusBarSize).round();
     final cropW = (imageWidth * .95).round();
-    final cropH = dwCrop;
+    final cropH = (dwCrop - statusBarSize).round();
 
     print("Exact conversion : x:$cropX , y:$cropY , w:$cropW , h:$cropH");
 
@@ -282,6 +284,7 @@ class _TakePictureState extends State<TakePicture> {
 
   Widget closeCameraBtn(BuildContext context) {
     return CircleAvatar(
+      backgroundColor: Colors.white,
       child: IconButton(
           icon: Icon(Icons.close),
           onPressed: () {
@@ -292,8 +295,9 @@ class _TakePictureState extends State<TakePicture> {
 
   Widget toggleCameraBtn(BuildContext context) {
     return CircleAvatar(
+      backgroundColor: Colors.white,
       child: IconButton(
-        icon: Icon(Icons.switch_camera_rounded),
+        icon: Icon(Icons.linked_camera_rounded),
         onPressed: _toggleCamera,
       ),
     );
@@ -301,6 +305,7 @@ class _TakePictureState extends State<TakePicture> {
 
   Widget takeImageBtn(BuildContext context) {
     return CircleAvatar(
+      backgroundColor: Colors.white,
       child: IconButton(
         icon: Icon(Icons.camera_alt),
         onPressed: () async {
