@@ -175,6 +175,7 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
   }
 
   //Function to Rotate File
+  // Using exif & image package
   Future<File> fixExifRotation(String imagePath) async {
     final originalFile = File(imagePath);
     List<int> imageBytes = await originalFile.readAsBytes();
@@ -229,6 +230,37 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
     return fixedFile;
   }
 
+  // Function to Crop Image
+  // Using flutter native image package
+  Future<File> cropImage(BuildContext context, String imagePath) async {
+    // final screenSize = MediaQuery.of(context).size;
+
+    ImageProperties properties =
+        await FlutterNativeImage.getImageProperties(imagePath);
+
+    int imageWidth = properties.width;
+    int imageHeight = properties.height;
+
+    print("imageWidth:$imageWidth");
+    print("imageHeight:$imageHeight");
+
+    final dxCrop = dx.round();
+    final dyCrop = (dy).round();
+    final dhCrop = (dhPointer).round();
+    final dwCrop = dwPointer.round();
+    print("dxCrop:$dxCrop , dyCrop:$dyCrop , dhCrop:$dhCrop , dwCrop:$dwCrop");
+
+    final croppedImage = await FlutterNativeImage.cropImage(
+      imagePath,
+      dxCrop,
+      dyCrop,
+      imageWidth - 10,
+      dhCrop,
+    );
+
+    return croppedImage;
+  }
+
   @override
   void initState() {
     // Flutter Framework has a convenient API to request a callback method to be executed once a frame rendering is complete.
@@ -248,20 +280,57 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
     super.dispose();
   }
 
-  final appBar = AppBar(
-    // You must wait until the controller is initialized before displaying the
-    // camera preview. Use a FutureBuilder to display a loading spinner until the
-    // controller has finished initializing.
-    title: const Text("Take a Picture"),
-  );
-
-  // Toogle Camera Button Widget
-  Widget toogleCameraBtn(BuildContext context) {
+  // Toggle Camera Button Widget
+  Widget toggleCameraBtn(BuildContext context) {
     return Align(
       alignment: Alignment.bottomRight,
       child: IconButton(
-        icon: Icon(Icons.camera_front),
+        icon: Icon(Icons.switch_camera_rounded),
         onPressed: _toggleCamera,
+      ),
+    );
+  }
+
+  // Take Image Button Widget
+  Widget takeImageBtn(BuildContext context) {
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: IconButton(
+        icon: Icon(Icons.camera_alt),
+        onPressed: () async {
+          // Take the Picture in a try / catch block. If anything goes wrong,
+          // catch the error.
+          try {
+            // Ensure that the camera is initialized.
+            await _initializeControllerFuture;
+
+            // Attempt to take a picture and get the file `image`
+            // where it was saved.
+            final image = await _cameraController.takePicture();
+            print(image.path);
+
+            // Rotate Image
+            final rotateFile = await fixExifRotation(image.path);
+
+            //Crop Image
+            final cropFile = await cropImage(context, rotateFile.path);
+
+            // If the picture was taken and cropped, display it on a new screen.
+            await Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (context) => DisplayPictureScreen(
+                  // Pass the automatically generated path to
+                  // the DisplayPictureScreen widget.
+                  // pass the cropped file path
+                  imagePath: cropFile.path,
+                ),
+              ),
+            );
+          } catch (e) {
+            // If an error occurs, log the error to the console.
+            print(e);
+          }
+        },
       ),
     );
   }
@@ -299,7 +368,6 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: appBar,
       body: Stack(
         children: <Widget>[
           FutureBuilder<void>(
@@ -318,84 +386,9 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
             },
           ),
           focusBorder(context),
-          toogleCameraBtn(context),
+          toggleCameraBtn(context),
+          takeImageBtn(context),
         ],
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
-      floatingActionButton: FloatingActionButton(
-        //background color
-        backgroundColor: Colors.white,
-        // Provide an onPressed callback.
-        onPressed: () async {
-          // Take the Picture in a try / catch block. If anything goes wrong,
-          // catch the error.
-          try {
-            // Ensure that the camera is initialized.
-            await _initializeControllerFuture;
-
-            // Attempt to take a picture and get the file `image`
-            // where it was saved.
-            final image = await _cameraController.takePicture();
-            print(image.path);
-
-            // Rotate Image
-            // Using exif & image package
-            final rotateFile = await fixExifRotation(image.path);
-
-            //Crop Image
-            //Using flutter native image package
-
-            // To get AppBar Height
-            final appBarHeight = appBar.preferredSize.height;
-
-            // To get StatusBar height
-            final statusBarHeight = MediaQuery.of(context).padding.top;
-            print("Status Bar : $statusBarHeight");
-
-            final screenWidth = MediaQuery.of(context).size.height;
-            print(screenWidth);
-
-            ImageProperties properties =
-                await FlutterNativeImage.getImageProperties(image.path);
-
-            int imageWidth = properties.width;
-            int imageHeight = properties.height;
-
-            print("imageWidth:$imageWidth");
-            print("imageHeight:$imageHeight");
-
-            final dxCrop = dx.round();
-            final dyCrop = (dy + appBarHeight + statusBarHeight).round();
-            final dhCrop = (dhPointer - appBarHeight - statusBarHeight).round();
-            final dwCrop = dwPointer.round();
-            print(
-                "dxCrop:$dxCrop , dyCrop:$dyCrop , dhCrop:$dhCrop , dwCrop:$dwCrop");
-
-            final croppedImage = await FlutterNativeImage.cropImage(
-              rotateFile.path,
-              dxCrop,
-              dyCrop,
-              imageWidth - 10,
-              dhCrop,
-            );
-
-            // If the picture was taken, display it on a new screen.
-            await Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (context) => DisplayPictureScreen(
-                  // Pass the automatically generated path to
-                  // the DisplayPictureScreen widget.
-                  // pass the cropped file path
-                  imagePath: croppedImage.path,
-                ),
-              ),
-            );
-          } catch (e) {
-            // If an error occurs, log the error to the console.
-            print(e);
-          }
-        },
-        child: const Icon(Icons.camera_alt),
       ),
     );
   }
