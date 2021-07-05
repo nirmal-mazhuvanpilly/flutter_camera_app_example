@@ -230,15 +230,71 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
     return fixedFile;
   }
 
+  //Function to Rotate Left
+  // Using exif & image package
+  Future<File> rotateToLeft(String imagePath) async {
+    final originalFile = File(imagePath);
+    List<int> imageBytes = await originalFile.readAsBytes();
+
+    final originalImage = img.decodeImage(imageBytes);
+
+    final height = originalImage.height;
+    final width = originalImage.width;
+
+    // Let's check for the image size
+    if (height >= width) {
+      // I'm interested in portrait photos so
+      // I'll just return here
+      print("Original image Height : ${originalImage.height}");
+      print("Original image Width : ${originalImage.width}");
+      return originalFile;
+    }
+
+    // We'll use the exif package to read exif data
+    // This is map of several exif properties
+    // Let's check 'Image Orientation'
+    final exifData = await readExifFromBytes(imageBytes);
+
+    img.Image fixedImage;
+
+    if (height < width) {
+      // rotate
+      if (exifData['Image Orientation'].printable.contains('Horizontal')) {
+        fixedImage = img.copyRotate(originalImage, 90);
+        print("Block 1");
+        print("Fixed image Height : ${fixedImage.height}");
+        print("Fixed image Width : ${fixedImage.width}");
+      } else if (exifData['Image Orientation'].printable.contains('180')) {
+        fixedImage = img.copyRotate(originalImage, -90);
+        print("Block 2");
+        print("Fixed image Height : ${fixedImage.height}");
+        print("Fixed image Width : ${fixedImage.width}");
+      } else {
+        fixedImage = img.copyRotate(originalImage, -90);
+        print("Block 3");
+        print("Fixed image Height : ${fixedImage.height}");
+        print("Fixed image Width : ${fixedImage.width}");
+      }
+    }
+
+    // Here you can select whether you'd like to save it as png
+    // or jpg with some compression
+    // I choose jpg with 100% quality
+    final fixedFile =
+        await originalFile.writeAsBytes(img.encodeJpg(fixedImage));
+
+    return fixedFile;
+  }
+
   // Function to Crop Image
   // Using flutter native image package
   Future<File> cropImage(BuildContext context, String imagePath) async {
     final screenSize = MediaQuery.of(context).size;
 
     // final screenWidth = screenSize.width;
-    final screenHeight = screenSize.height;
+    // final screenHeight = screenSize.height;
 
-    int heightOffset = screenHeight.round();
+    // int heightOffset = screenHeight.round();
     // int widthOffset = screenWidth.round();
 
     ImageProperties properties =
@@ -324,6 +380,9 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
             //Crop Image
             final cropFile = await cropImage(context, rotateFile.path);
 
+            //Rotate Left
+            final rotateLeft = await rotateToLeft(cropFile.path);
+
             // If the picture was taken and cropped, display it on a new screen.
             await Navigator.of(context).push(
               MaterialPageRoute(
@@ -331,7 +390,7 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
                   // Pass the automatically generated path to
                   // the DisplayPictureScreen widget.
                   // pass the cropped file path
-                  imagePath: cropFile.path,
+                  imagePath: rotateLeft.path,
                 ),
               ),
             );
@@ -406,6 +465,7 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
 // A widget that displays the picture taken by the user.
 class DisplayPictureScreen extends StatelessWidget {
   final String imagePath;
+
   DisplayPictureScreen({
     @required this.imagePath,
   });
@@ -427,16 +487,15 @@ class DisplayPictureScreen extends StatelessWidget {
           children: <Widget>[
             Flexible(
               flex: 1,
-              child: Container(
-                // color: Colors.white,
-                height: 250,
-                width: double.infinity,
-                margin: const EdgeInsets.all(10),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(20),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  color: Colors.white,
+                  height: MediaQuery.of(context).size.height * .30,
+                  width: MediaQuery.of(context).size.width * .95,
                   child: Image.file(
                     File(imagePath),
-                    fit: BoxFit.contain,
+                    fit: BoxFit.fill,
                   ),
                 ),
               ),
