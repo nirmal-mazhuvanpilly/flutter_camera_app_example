@@ -6,7 +6,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_native_image/flutter_native_image.dart';
 import 'package:image/image.dart' as img;
-import 'package:exif/exif.dart';
+// import 'package:exif/exif.dart';
 
 void main() {
   // Ensure that plugin services are initialized so that 'availableCameras'
@@ -41,7 +41,7 @@ class HomePage extends StatelessWidget {
           onPressed: () {
             Navigator.of(context).push(
               MaterialPageRoute(
-                builder: (context) => TakePictureScreen(),
+                builder: (context) => TakePicture(),
               ),
             );
           },
@@ -78,30 +78,34 @@ class Origin extends CustomPainter {
 }
 
 // A screen that allows users to take a picture.
-class TakePictureScreen extends StatefulWidget {
+class TakePicture extends StatefulWidget {
   @override
-  _TakePictureScreenState createState() => _TakePictureScreenState();
+  _TakePictureState createState() => _TakePictureState();
 }
 
-class _TakePictureScreenState extends State<TakePictureScreen> {
+class _TakePictureState extends State<TakePicture> {
   var _availableCamera;
+
   var _selectedCamera;
+
   CameraController _cameraController;
+
   Future<void> _initializeControllerFuture;
+
   GlobalKey _focusKeyValue = GlobalKey();
+
   GlobalKey _pointerKeyValue = GlobalKey();
 
-  static double dx = 0;
-  static double dy = 0;
-  static double dh = 0;
-  static double dw = 0;
+  double dx = 0;
+  double dy = 0;
+  double dh = 0;
+  double dw = 0;
 
-  static double dxPointer = 0;
-  static double dyPointer = 0;
-  static double dhPointer = 0;
-  static double dwPointer = 0;
+  double dxPointer = 0;
+  double dyPointer = 0;
+  double dhPointer = 0;
+  double dwPointer = 0;
 
-  //Function to get Camera
   _getCamera() async {
     // Get the list of available cameras.
     _availableCamera = await availableCameras();
@@ -123,7 +127,6 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
     _initializeControllerFuture = _cameraController.initialize();
   }
 
-  // Function to get Position of Focus Border
   _getPositionofFocusBorder() {
     RenderBox box = _focusKeyValue.currentContext.findRenderObject();
     Offset position = box.localToGlobal(Offset.zero);
@@ -139,7 +142,6 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
     });
   }
 
-  // Function to get Position of Pointer
   _getPositionofPointer() {
     RenderBox box = _pointerKeyValue.currentContext.findRenderObject();
     Offset position = box.localToGlobal(Offset.zero);
@@ -156,13 +158,11 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
     });
   }
 
-  //This function will call in addPostFrameCallback
   _afterLayout(_) {
     _getPositionofFocusBorder();
     _getPositionofPointer();
   }
 
-  // Function to toggle Camera
   _toggleCamera() {
     setState(() {
       _selectedCamera = _selectedCamera == _availableCamera.first
@@ -174,8 +174,6 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
     });
   }
 
-  //Function to Rotate File
-  // Using exif & image package
   Future<File> rotateToRight(String imagePath) async {
     final originalFile = File(imagePath);
     List<int> imageBytes = await originalFile.readAsBytes();
@@ -198,8 +196,6 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
     return fixedFile;
   }
 
-  //Function to Rotate Left
-  // Using exif & image package
   Future<File> rotateToLeft(String imagePath) async {
     final originalFile = File(imagePath);
     List<int> imageBytes = await originalFile.readAsBytes();
@@ -222,15 +218,15 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
     return fixedFile;
   }
 
-  // Function to Crop Image
-  // Using flutter native image package
   Future<File> cropImage(BuildContext context, String imagePath) async {
     final screenSize = MediaQuery.of(context).size;
+    final statusBarSize = MediaQuery.of(context).padding.top;
 
     final screenWidth = screenSize.width;
     final screenHeight = screenSize.height;
     print("Screen Height : $screenHeight");
     print("Screen Width : $screenWidth");
+    print("Status Bar Height : $statusBarSize");
 
     ImageProperties properties =
         await FlutterNativeImage.getImageProperties(imagePath);
@@ -247,19 +243,20 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
     final dwCrop = dw.round();
     print("dxCrop:$dxCrop , dyCrop:$dyCrop , dhCrop:$dhCrop , dwCrop:$dwCrop");
 
-    int yOffset = (screenHeight - dwCrop + 50).round();
-    print(yOffset);
+    final cropX = dxCrop;
+    final cropY = (screenHeight - dyCrop - statusBarSize).round();
+    final cropW = (imageWidth * .95).round();
+    final cropH = dwCrop;
+
+    print("Exact conversion : x:$cropX , y:$cropY , w:$cropW , h:$cropH");
 
     final croppedImage = await FlutterNativeImage.cropImage(
       imagePath,
-      dxCrop,
-      yOffset,
-      (imageWidth * .95).toInt(),
-      dwCrop,
+      cropX,
+      cropY,
+      cropW,
+      cropH,
     );
-
-    print(
-        "Exact conversion : x:$dxCrop , y:${dyCrop + 150} , w:${(imageWidth * .95).toInt()} , h:$dwCrop");
 
     return croppedImage;
   }
@@ -283,7 +280,6 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
     super.dispose();
   }
 
-  // Close Camera
   Widget closeCameraBtn(BuildContext context) {
     return CircleAvatar(
       child: IconButton(
@@ -294,7 +290,6 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
     );
   }
 
-  // Toggle Camera Button Widget
   Widget toggleCameraBtn(BuildContext context) {
     return CircleAvatar(
       child: IconButton(
@@ -304,7 +299,6 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
     );
   }
 
-  // Take Image Button Widget
   Widget takeImageBtn(BuildContext context) {
     return CircleAvatar(
       child: IconButton(
@@ -331,7 +325,7 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
             final rotateLeft = await rotateToLeft(cropFile.path);
 
             // If the picture was taken and cropped, display it on a new screen.
-            await Navigator.of(context).push(
+            await Navigator.of(context).pushReplacement(
               MaterialPageRoute(
                 builder: (context) => DisplayPictureScreen(
                   // Pass the automatically generated path to
@@ -350,7 +344,6 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
     );
   }
 
-  // Focus Border Widget
   Widget focusBorder(BuildContext context) {
     return Stack(
       children: <Widget>[
@@ -365,7 +358,7 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
                 color: Colors.yellow,
                 width: 2,
               ),
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(10),
             ),
           ),
         ),
@@ -393,10 +386,7 @@ class _TakePictureScreenState extends State<TakePictureScreen> {
                 //Used Stack to Use Focus Border in CameraPreview
                 return CameraPreview(_cameraController);
               } else {
-                return Center(
-                  // Otherwise, display a loading indicator.
-                  child: CupertinoActivityIndicator(),
-                );
+                return Container();
               }
             },
           ),
@@ -448,7 +438,7 @@ class DisplayPictureScreen extends StatelessWidget {
             Flexible(
               flex: 1,
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(10),
                 child: Container(
                   color: Colors.white,
                   height: MediaQuery.of(context).size.height * .30,
@@ -470,7 +460,11 @@ class DisplayPictureScreen extends StatelessWidget {
                 IconButton(
                   icon: Icon(Icons.camera_alt),
                   onPressed: () {
-                    Navigator.of(context).pop();
+                    Navigator.of(context).pushReplacement(
+                      MaterialPageRoute(
+                        builder: (context) => TakePicture(),
+                      ),
+                    );
                   },
                 ),
                 Text("Retake"),
