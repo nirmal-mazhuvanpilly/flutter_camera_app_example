@@ -243,15 +243,11 @@ class _TakePictureState extends State<TakePicture> {
     print("imageWidth:$imageWidth");
     print("imageHeight:$imageHeight");
 
+    // To get xOffset,yOffset,widthOffset,heightOffset
     int xOffset = ((dx * imageWidth) / screenWidth).round();
     int yOffset = ((dy * imageHeight) / screenHeight).round();
     int widthOffset = ((dw * imageWidth) / screenWidth).round();
     int heightOffset = ((dh * imageHeight) / screenHeight).round();
-
-    xOffset = (xOffset + (xOffset / 2)).round();
-    yOffset = (yOffset - xOffset).round();
-    widthOffset = widthOffset - (2 * xOffset);
-    heightOffset = (heightOffset + (xOffset / 2)).round();
 
     print(
         "xOffset:$xOffset , yOffset:$yOffset , widthOffset:$widthOffset , heightOffset:$heightOffset  ");
