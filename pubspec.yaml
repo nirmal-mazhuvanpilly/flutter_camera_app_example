@@ -31,7 +31,7 @@ dependencies:
   camera: ^0.6.4+5
   flutter_native_image: ^0.0.5
   image: ^2.1.19
-  exif:
+  native_device_orientation: ^0.4.3
   
 
 dev_dependencies:

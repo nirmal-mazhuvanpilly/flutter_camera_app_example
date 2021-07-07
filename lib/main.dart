@@ -4,15 +4,21 @@ import 'dart:io';
 import 'package:camera/camera.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_native_image/flutter_native_image.dart';
 import 'package:image/image.dart' as img;
-// import 'package:exif/exif.dart';
+import 'package:native_device_orientation/native_device_orientation.dart';
 
 void main() {
   // Ensure that plugin services are initialized so that 'availableCameras'
   // can be called before 'runApp()'
   WidgetsFlutterBinding.ensureInitialized();
 
+  //Setting PreferredOrientation to Portrait
+  SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitDown,
+    DeviceOrientation.portraitUp,
+  ]);
   runApp(MyApp());
 }
 
@@ -84,6 +90,8 @@ class TakePicture extends StatefulWidget {
 }
 
 class _TakePictureState extends State<TakePicture> {
+  bool useSensor = true;
+
   var _availableCamera;
 
   var _selectedCamera;
@@ -389,27 +397,59 @@ class _TakePictureState extends State<TakePicture> {
               if (snapshot.connectionState == ConnectionState.done) {
                 // If the Future is complete, display the preview.
                 //Used Stack to Use Focus Border in CameraPreview
-                return CameraPreview(_cameraController);
+                return Container(
+                  height: double.infinity,
+                  width: double.infinity,
+                  child: CameraPreview(_cameraController),
+                );
               } else {
                 return Container();
               }
             },
           ),
           focusBorder(context),
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: Padding(
-              padding: const EdgeInsets.all(10.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: <Widget>[
-                  closeCameraBtn(context),
-                  takeImageBtn(context),
-                  toggleCameraBtn(context),
-                ],
-              ),
-            ),
+          //Use flutter native_device_orientation package to use NativeDeviceOrientationReader
+          NativeDeviceOrientationReader(
+            // Set useSensor to true to get NativeDeviceOrientation
+            useSensor: useSensor,
+            builder: (context) {
+              final orientation =
+                  NativeDeviceOrientationReader.orientation(context);
+              print('Received new orientation: $orientation');
+
+              if (orientation == NativeDeviceOrientation.portraitUp) {
+                return Align(
+                  alignment: Alignment.bottomCenter,
+                  child: Padding(
+                    padding: const EdgeInsets.all(25.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: <Widget>[
+                        closeCameraBtn(context),
+                        takeImageBtn(context),
+                        toggleCameraBtn(context),
+                      ],
+                    ),
+                  ),
+                );
+              } else {
+                return Align(
+                  alignment: Alignment.bottomCenter,
+                  child: Padding(
+                    padding: const EdgeInsets.all(25.0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: <Widget>[
+                        closeCameraBtn(context),
+                        toggleCameraBtn(context),
+                      ],
+                    ),
+                  ),
+                );
+              }
+            },
           ),
         ],
       ),
