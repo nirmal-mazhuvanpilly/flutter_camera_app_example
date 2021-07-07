@@ -9,6 +9,7 @@ import 'package:flutter_native_image/flutter_native_image.dart';
 import 'package:image/image.dart' as img;
 import 'package:native_device_orientation/native_device_orientation.dart';
 
+//Flutter Camera App with Crop Functionality Programmatically
 void main() {
   // Ensure that plugin services are initialized so that 'availableCameras'
   // can be called before 'runApp()'
@@ -182,50 +183,6 @@ class _TakePictureState extends State<TakePicture> {
     });
   }
 
-  Future<File> rotateToRight(String imagePath) async {
-    final originalFile = File(imagePath);
-    List<int> imageBytes = await originalFile.readAsBytes();
-    final originalImage = img.decodeImage(imageBytes);
-
-    img.Image fixedImage;
-
-    fixedImage = img.copyRotate(originalImage, 90);
-
-    print("***Block***");
-    print("Fixed image Height : ${fixedImage.height}");
-    print("Fixed image Width : ${fixedImage.width}");
-
-    // Here you can select whether you'd like to save it as png
-    // or jpg with some compression
-    // I choose jpg with 100% quality
-    final fixedFile =
-        await originalFile.writeAsBytes(img.encodeJpg(fixedImage));
-
-    return fixedFile;
-  }
-
-  Future<File> rotateToLeft(String imagePath) async {
-    final originalFile = File(imagePath);
-    List<int> imageBytes = await originalFile.readAsBytes();
-    final originalImage = img.decodeImage(imageBytes);
-
-    img.Image fixedImage;
-
-    fixedImage = img.copyRotate(originalImage, -90);
-
-    print("***Block***");
-    print("Fixed image Height : ${fixedImage.height}");
-    print("Fixed image Width : ${fixedImage.width}");
-
-    // Here you can select whether you'd like to save it as png
-    // or jpg with some compression
-    // I choose jpg with 100% quality
-    final fixedFile =
-        await originalFile.writeAsBytes(img.encodeJpg(fixedImage));
-
-    return fixedFile;
-  }
-
   Future<File> cropImage(BuildContext context, String imagePath) async {
     // To get Screen size
     final screenSize = MediaQuery.of(context).size;
@@ -269,6 +226,86 @@ class _TakePictureState extends State<TakePicture> {
     );
 
     return croppedImage;
+  }
+
+  Future<File> fixRotationRight(String imagePath) async {
+    print("fixExifRotattionRight");
+    final originalFile = File(imagePath);
+    List<int> imageBytes = await originalFile.readAsBytes();
+
+    final originalImage = img.decodeImage(imageBytes);
+
+    final height = originalImage.height;
+    final width = originalImage.width;
+
+    print("Original Image Height : $height");
+    print("Original Image Width : $width");
+
+    // Let's check for the image size
+    // This will be true also for upside-down photos but it's ok for me
+    if (height >= width) {
+      // I'm interested in portrait photos so
+      // I'll just return here
+      return originalFile;
+    }
+
+    img.Image fixedImage;
+
+    if (height <= width) {
+      print("Block Right");
+      fixedImage = img.copyRotate(originalImage, 90);
+      print("Fixed Image Height : ${fixedImage.height}");
+      print("Fixed Image Width : ${fixedImage.width}");
+    }
+
+    // Here you can select whether you'd like to save it as png
+    // or jpg with some compression
+    // I choose jpg with 100% quality
+    final fixedFile =
+        await originalFile.writeAsBytes(img.encodeJpg(fixedImage));
+
+    return fixedFile;
+  }
+
+  Future<File> fixRotationLeft(String imagePath) async {
+    print("fixExifRotattionLeft");
+    final originalFile = File(imagePath);
+    List<int> imageBytes = await originalFile.readAsBytes();
+
+    final originalImage = img.decodeImage(imageBytes);
+
+    final height = originalImage.height;
+    final width = originalImage.width;
+
+    print("Original Image Height : $height");
+    print("Original Image Width : $width");
+
+    // Let's check for the image size
+    // This will be true also for upside-down photos but it's ok for me
+    if (height >= width) {
+      // I'm interested in portrait photos so
+      // I'll just return here
+      return originalFile;
+    }
+
+    img.Image fixedImage;
+
+    if (height <= width) {
+      // rotate
+
+      print("Block Left");
+      fixedImage = img.copyRotate(originalImage, -90);
+      print("Fixed Image Height : ${fixedImage.height}");
+      print("Fixed Image Width : ${fixedImage.width}");
+    }
+
+    // Here you can select whether you'd like to save it as png
+    // or jpg with some compression
+    // I choose jpg with 100% quality
+    final fixedFile =
+        await originalFile.writeAsBytes(img.encodeJpg(fixedImage));
+
+    return fixedFile;
   }
 
   @override
@@ -328,14 +365,31 @@ class _TakePictureState extends State<TakePicture> {
             final image = await _cameraController.takePicture();
             print(image.path);
 
-            // Rotate Image Right
-            final rotateFile = await rotateToRight(image.path);
+            // To get Image properties
+            ImageProperties properties =
+                await FlutterNativeImage.getImageProperties(image.path);
+            // Print Image height and width
+            print("Image Properties Height : ${properties.height}");
+            print("Image Properties Width : ${properties.width}");
 
-            //Crop Image
-            final cropFile = await cropImage(context, rotateFile.path);
+            File cropFile;
+            File fixImageRight;
+            File fixImageLeft;
 
-            //Rotate Image Left
-            final rotateLeft = await rotateToLeft(cropFile.path);
+            if (properties.height >= properties.width) {
+              cropFile = await cropImage(context, image.path);
+            } else {
+              // Rotate Image Right
+              fixImageRight = await fixRotationRight(image.path);
+
+              //Crop Image
+              cropFile = await cropImage(context, fixImageRight.path);
+
+              // Rotate Image Left
+              fixImageLeft = await fixRotationLeft(cropFile.path);
+
+              cropFile = fixImageLeft;
+            }
 
             // If the picture was taken and cropped, display it on a new screen.
             await Navigator.of(context).pushReplacement(
@@ -344,7 +398,7 @@ class _TakePictureState extends State<TakePicture> {
                   // Pass the automatically generated path to
                   // the DisplayPictureScreen widget.
                   // pass the cropped file path
-                  imagePath: rotateLeft.path,
+                  imagePath: cropFile.path,
                 ),
               ),
             );
