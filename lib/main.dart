@@ -34,25 +34,86 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
+  @override
+  _HomePageState createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  File imgFile;
+
+  Widget showImage(BuildContext context) {
+    return Stack(
+      alignment: Alignment.center,
+      children: <Widget>[
+        Center(
+          child: Container(
+            height: MediaQuery.of(context).size.height * .30,
+            width: MediaQuery.of(context).size.width * .95,
+            decoration: imgFile != null
+                ? BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    image: DecorationImage(
+                        image: FileImage(imgFile), fit: BoxFit.fill),
+                  )
+                : BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+          ),
+        ),
+        imgFile == null
+            ? Center(
+                child: Icon(
+                  Icons.camera_alt_outlined,
+                  size: 40,
+                  color: Colors.black54,
+                ),
+              )
+            : Container(),
+      ],
+    );
+  }
+
+  void gotoTakePicture(BuildContext context) async {
+    await Navigator.of(context)
+        .push(
+      MaterialPageRoute(
+        builder: (context) => TakePicture(),
+      ),
+    )
+        .then((value) {
+      print("Crop File in Home Screen");
+      if (value != null) {
+        setState(() {
+          imgFile = value;
+        });
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text("Camera HomePage"),
       ),
-      body: Center(
-        //Click to Open Camera
-        child: RaisedButton(
-          child: const Text("Open Camera"),
-          onPressed: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (context) => TakePicture(),
-              ),
-            );
-          },
-        ),
+      body: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          showImage(context),
+          SizedBox(height: 25),
+          Center(
+            //Click to Open Camera
+            child: RaisedButton(
+              child: const Text("Open Camera"),
+              onPressed: () {
+                gotoTakePicture(context);
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -310,10 +371,14 @@ class _TakePictureState extends State<TakePicture> {
 
   @override
   void initState() {
+    SystemChrome.setEnabledSystemUIOverlays([SystemUiOverlay.top]);
+    SystemChrome.setEnabledSystemUIOverlays([SystemUiOverlay.bottom]);
+
     // Flutter Framework has a convenient API to request a callback method to be executed once a frame rendering is complete.
     // This method is:
     // WidgetsBinding.instance.addPostFrameCallback.
     WidgetsBinding.instance.addPostFrameCallback(_afterLayout);
+
     super.initState();
 
     //Function to get Camera
@@ -346,6 +411,27 @@ class _TakePictureState extends State<TakePicture> {
         onPressed: _toggleCamera,
       ),
     );
+  }
+
+  // Navigate to Display Picture
+  void gotoDisplayPicture(File cropFile) async {
+    await Navigator.of(context)
+        .push(
+      MaterialPageRoute(
+        builder: (context) => DisplayPictureScreen(
+          // Pass the automatically generated path to
+          // the DisplayPictureScreen widget.
+          // pass the cropped file path
+          image: cropFile,
+        ),
+      ),
+    )
+        .then((value) {
+      print("Crop File in Take Picture : $value");
+      if (value != null) {
+        Navigator.of(context).pop(cropFile);
+      }
+    });
   }
 
   Widget takeImageBtn(BuildContext context) {
@@ -392,16 +478,7 @@ class _TakePictureState extends State<TakePicture> {
             }
 
             // If the picture was taken and cropped, display it on a new screen.
-            await Navigator.of(context).pushReplacement(
-              MaterialPageRoute(
-                builder: (context) => DisplayPictureScreen(
-                  // Pass the automatically generated path to
-                  // the DisplayPictureScreen widget.
-                  // pass the cropped file path
-                  imagePath: cropFile.path,
-                ),
-              ),
-            );
+            gotoDisplayPicture(cropFile);
           } catch (e) {
             // If an error occurs, log the error to the console.
             print(e);
@@ -513,10 +590,10 @@ class _TakePictureState extends State<TakePicture> {
 
 // A widget that displays the picture taken by the user.
 class DisplayPictureScreen extends StatelessWidget {
-  final String imagePath;
+  final File image;
 
   DisplayPictureScreen({
-    @required this.imagePath,
+    @required this.image,
   });
 
   @override
@@ -539,34 +616,44 @@ class DisplayPictureScreen extends StatelessWidget {
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(10),
                 child: Container(
-                  color: Colors.white,
                   height: MediaQuery.of(context).size.height * .30,
                   width: MediaQuery.of(context).size.width * .95,
-                  child: Image.file(
-                    File(imagePath),
-                    fit: BoxFit.fill,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    image: DecorationImage(
+                      image: FileImage(image),
+                      fit: BoxFit.fill,
+                    ),
                   ),
                 ),
               ),
             ),
             SizedBox(height: 25),
-            Column(
-              mainAxisAlignment: MainAxisAlignment.start,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: <Widget>[
                 //Button to Retake Camera
                 //Close current context
-                IconButton(
-                  icon: Icon(Icons.camera_alt),
-                  onPressed: () {
-                    Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(
-                        builder: (context) => TakePicture(),
-                      ),
-                    );
-                  },
+                CircleAvatar(
+                  backgroundColor: Colors.white,
+                  child: IconButton(
+                    icon: Icon(Icons.close),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                  ),
                 ),
-                Text("Retake"),
+                SizedBox(width: 25),
+                CircleAvatar(
+                  backgroundColor: Colors.white,
+                  child: IconButton(
+                    icon: Icon(Icons.check),
+                    onPressed: () {
+                      Navigator.of(context).pop(image);
+                    },
+                  ),
+                ),
               ],
             ),
           ],
